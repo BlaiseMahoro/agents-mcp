@@ -1,0 +1,38 @@
+[project]
+name = "agents-core"
+version = "0.1.0"
+description = "Research / Plan / Execute agents with a chat API and MCP server"
+requires-python = ">=3.12"
+dependencies = [
+    "anthropic>=2.5.0",
+    "docker>=7.2.0",
+    "fastapi>=0.162.0",
+    "httpx>=0.28.1",
+    "mcp>=2.3.0",
+    "openai>=3.46.0",
+    "pydantic>=2.14.2",
+    "pyyaml>=6.0.3",
+    "sqlmodel>=0.0.48",
+    "sse-starlette>=3.6.0",
+    "trafilatura>=2.3.1",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[project.scripts]
+agents-api = "agents_core.api.main:run"
+agents-mcp = "agents_core.mcp_server.server:main"
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1.post1",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]

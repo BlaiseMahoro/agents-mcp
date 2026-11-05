@@ -1,0 +1,39 @@
+# Providers: where models come from. LM Studio, Ollama and vLLM all speak the
+# OpenAI-compatible API, so they use type: openai_compat with their base_url.
+providers:
+  lmstudio:
+    type: openai_compat
+    base_url: http://localhost:1234/v1    # LM Studio local server (MLX models on Apple Silicon)
+  ollama:
+    type: openai_compat
+    base_url: http://localhost:11434/v1   # Ollama
+  claude:
+    type: anthropic        # credentials: ANTHROPIC_API_KEY or `ant auth login`
+    fallbacks: true        # server-side refusal fallbacks
+
+# Default: open-source Qwen3.5-9B in LM Studio for everything.
+# Ollama equivalent: provider: ollama, model: "qwen3.5:9b".
+# Claude: provider: claude, model: claude-opus-5-5 (and search: native for research).
+# The UI can switch provider/model per agent at runtime.
+agents:
+  orchestrator: { provider: lmstudio, model: qwen/qwen3.5-9b }
+  research:     { provider: lmstudio, model: qwen/qwen3.5-9b, search: searxng, max_searches: 8 }
+  plan:         { provider: lmstudio, model: qwen/qwen3.5-9b }
+  execute:      { provider: lmstudio, model: qwen/qwen3.5-9b }   # used only by llm_task steps
+
+search:
+  searxng_url: http://localhost:8888
+
+sandbox:
+  image: agents-sandbox:latest
+  network: true
+  cpus: 2
+  memory: 2g
+  step_timeout_s: 120
+  allowed_step_types: [shell, write_file, read_file, llm_task]
+
+defaults:
+  require_approval: true
+  enabled: { research: true, plan: true, execute: true }
+
+data_dir: data
