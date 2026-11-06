@@ -15,6 +15,7 @@ from agents_core.schemas import utcnow
 
 class Conversation(SQLModel, table=True):
     id: str = Field(primary_key=True)
+    owner: str | None = Field(default=None, index=True)  # visitor id in demo mode; None locally
     title: str = "New chat"
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
@@ -67,7 +68,17 @@ def engine():
     cfg.data_dir.mkdir(parents=True, exist_ok=True)
     eng = create_engine(f"sqlite:///{cfg.db_path}", connect_args={"check_same_thread": False})
     SQLModel.metadata.create_all(eng)
+    _add_missing_columns(eng)
     return eng
+
+
+def _add_missing_columns(eng) -> None:
+    """create_all doesn't alter existing tables; add columns introduced after a database was created."""
+    with eng.begin() as conn:
+        cols = {row[1] for row in conn.exec_driver_sql("PRAGMA table_info(conversation)")}
+        if "owner" not in cols:
+            conn.exec_driver_sql("ALTER TABLE conversation ADD COLUMN owner VARCHAR")
+            conn.exec_driver_sql("CREATE INDEX IF NOT EXISTS ix_conversation_owner ON conversation (owner)")
 
 
 def session() -> Session:

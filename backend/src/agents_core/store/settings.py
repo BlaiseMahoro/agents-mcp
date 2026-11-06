@@ -36,7 +36,7 @@ def get_settings() -> RuntimeSettings:
     with session() as s:
         row = s.get(Setting, _KEY)
     if not row:
-        return base
+        return _locked(base)
     saved = row.value or {}
     merged = base.model_dump()
     merged["enabled"].update(saved.get("enabled", {}))
@@ -45,7 +45,14 @@ def get_settings() -> RuntimeSettings:
     for name, override in saved.get("agents", {}).items():
         if name in merged["agents"]:
             merged["agents"][name].update(override)
-    return RuntimeSettings.model_validate(merged)
+    return _locked(RuntimeSettings.model_validate(merged))
+
+
+def _locked(settings: RuntimeSettings) -> RuntimeSettings:
+    """In a public demo, running plans is never allowed, whatever is saved."""
+    if get_config().deployment.demo:
+        settings.enabled["execute"] = False
+    return settings
 
 
 def update_settings(patch: dict) -> RuntimeSettings:

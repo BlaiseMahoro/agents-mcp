@@ -12,17 +12,21 @@ from agents_core.store.db import Conversation, Message, PlanRow, ReportRow, RunR
 # --- Conversations ------------------------------------------------------------
 
 
-def create_conversation(title: str = "New chat") -> Conversation:
-    conv = Conversation(id=new_id("conv"), title=title)
+def create_conversation(title: str = "New chat", owner: str | None = None) -> Conversation:
+    conv = Conversation(id=new_id("conv"), title=title, owner=owner)
     with session() as s:
         s.add(conv)
         s.commit()
     return conv
 
 
-def list_conversations() -> list[Conversation]:
+def list_conversations(owner: str | None = None) -> list[Conversation]:
+    """All chats locally; in demo mode only the given visitor's."""
+    q = select(Conversation).order_by(col(Conversation.updated_at).desc())
+    if owner is not None:
+        q = q.where(Conversation.owner == owner)
     with session() as s:
-        return list(s.exec(select(Conversation).order_by(col(Conversation.updated_at).desc())))
+        return list(s.exec(q))
 
 
 def get_conversation(conv_id: str) -> Conversation | None:

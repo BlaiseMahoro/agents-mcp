@@ -21,6 +21,8 @@ class ProviderConfig(BaseModel):
     type: Literal["anthropic", "openai_compat"]
     base_url: str | None = None
     api_key_env: str | None = None  # env var holding the key, if the endpoint needs one
+    # gcp_id_token: authenticate to a private Cloud Run service with the VM's identity
+    auth: Literal["none", "gcp_id_token"] = "none"
     fallbacks: bool = True  # anthropic only: server-side refusal fallbacks
 
 
@@ -52,12 +54,22 @@ class Defaults(BaseModel):
     enabled: dict[str, bool] = Field(default_factory=lambda: {"research": True, "plan": True, "execute": True})
 
 
+class DeploymentConfig(BaseModel):
+    """Settings for running as a public demo; off for local use."""
+
+    demo: bool = False  # Execute locked off, settings need the admin token, chats are per visitor
+    messages_per_visitor_hour: int = 20
+    messages_per_day: int = 400  # across all visitors; bounds GPU time
+    admin_token_env: str = "ADMIN_TOKEN"
+
+
 class AppConfig(BaseModel):
     providers: dict[str, ProviderConfig]
     agents: dict[str, AgentModelConfig]
     search: SearchConfig = SearchConfig()
     sandbox: SandboxConfig = SandboxConfig()
     defaults: Defaults = Defaults()
+    deployment: DeploymentConfig = DeploymentConfig()
     data_dir: Path = REPO_ROOT / "data"
 
     @property
@@ -75,7 +87,8 @@ def config_path() -> Path:
 
 @lru_cache
 def get_config() -> AppConfig:
-    raw = yaml.safe_load(config_path().read_text())
+    # ${VAR} references are filled from the environment (used by the cloud config).
+    raw = yaml.safe_load(os.path.expandvars(config_path().read_text()))
     cfg = AppConfig.model_validate(raw)
     if not cfg.data_dir.is_absolute():
         cfg.data_dir = (REPO_ROOT / cfg.data_dir).resolve()

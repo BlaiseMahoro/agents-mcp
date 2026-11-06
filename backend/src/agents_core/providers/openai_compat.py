@@ -8,6 +8,7 @@ import re
 from collections.abc import AsyncIterator
 from typing import Any
 
+import httpx
 import openai
 from pydantic import ValidationError
 
@@ -28,6 +29,13 @@ class OpenAICompatProvider:
         self.model = agent.model
         self.reasoning_off_supported = True
         key = os.environ.get(provider.api_key_env, "") if provider.api_key_env else ""
+        if provider.auth == "gcp_id_token" and client is None:
+            from agents_core.providers.gcp_auth import audience_for, id_token
+
+            try:
+                key = id_token(audience_for(provider.base_url or ""))
+            except httpx.HTTPError as e:
+                raise ProviderError(f"could not get a Google Cloud identity token for the model server: {e}") from e
         self.client = client or openai.AsyncOpenAI(base_url=provider.base_url, api_key=key or "not-needed")
 
     async def run(

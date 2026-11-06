@@ -8,12 +8,13 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ValidationError
 from sse_starlette.sse import EventSourceResponse
 
 from agents_core.agents.chat import AgentDisabled, handle_turn, transcript_text
+from agents_core.api.access import check_plan_access, demo, is_admin, own_conversation, rate_limit, require_admin, visitor
 from agents_core.agents.executor import request_cancel
 from agents_core.agents.runner import run_plan
 from agents_core.config import get_config
@@ -71,7 +72,14 @@ def _message_out(m) -> dict[str, Any]:
 
 
 @app.get("/api/health")
-async def health() -> dict[str, Any]:
+async def health(x_admin_token: str | None = Header(default=None)) -> dict[str, Any]:
+    report = await _health()
+    if not is_admin(x_admin_token):  # demo visitors see up/down only, not internal hosts or errors
+        report = {k: ({p: {"ok": c["ok"], "detail": ""} for p, c in v.items()} if k == "providers" else {"ok": v["ok"], "detail": ""}) for k, v in report.items()}
+    return report
+
+
+async def _health() -> dict[str, Any]:
     cfg = get_config()
     docker_ok, docker_msg = docker_available()
     search_ok, search_msg = await searxng_ok(cfg.search)
@@ -94,18 +102,28 @@ async def health() -> dict[str, Any]:
     }
 
 
+def _settings_out(can_edit: bool) -> dict[str, Any]:
+    return {**get_settings().model_dump(), "providers": list(get_config().providers), "demo": demo(), "can_edit": can_edit}
+
+
 @app.get("/api/settings")
-def read_settings() -> dict[str, Any]:
-    return {**get_settings().model_dump(), "providers": list(get_config().providers)}
+def read_settings(x_admin_token: str | None = Header(default=None)) -> dict[str, Any]:
+    return _settings_out(is_admin(x_admin_token))
 
 
-@app.put("/api/settings")
+@app.get("/api/settings/admin")
+def check_admin(_: None = Depends(require_admin)) -> dict[str, bool]:
+    """Lets the UI confirm an admin token before unlocking the settings."""
+    return {"ok": True}
+
+
+@app.put("/api/settings", dependencies=[Depends(require_admin)])
 def write_settings(patch: dict[str, Any]) -> dict[str, Any]:
     try:
         update_settings(patch)
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
-    return read_settings()
+    return _settings_out(True)
 
 
 @app.get("/api/models")
@@ -129,25 +147,24 @@ async def models() -> dict[str, list[str]]:
 
 
 @app.get("/api/conversations")
-def conversations() -> list[dict[str, Any]]:
-    return [c.model_dump() for c in repo.list_conversations()]
+def conversations(owner: str | None = Depends(visitor)) -> list[dict[str, Any]]:
+    return [c.model_dump(exclude={"owner"}) for c in repo.list_conversations(owner)]
 
 
 @app.post("/api/conversations")
-def new_conversation() -> dict[str, Any]:
-    return repo.create_conversation().model_dump()
+def new_conversation(owner: str | None = Depends(visitor)) -> dict[str, Any]:
+    return repo.create_conversation(owner=owner).model_dump(exclude={"owner"})
 
 
 @app.get("/api/conversations/{conv_id}")
-def conversation(conv_id: str) -> dict[str, Any]:
-    conv = repo.get_conversation(conv_id)
-    if not conv:
-        raise HTTPException(404, "conversation not found")
-    return {**conv.model_dump(), "messages": [_message_out(m) for m in repo.list_messages(conv_id)]}
+def conversation(conv_id: str, owner: str | None = Depends(visitor)) -> dict[str, Any]:
+    conv = own_conversation(conv_id, owner)
+    return {**conv.model_dump(exclude={"owner"}), "messages": [_message_out(m) for m in repo.list_messages(conv_id)]}
 
 
 @app.delete("/api/conversations/{conv_id}")
-def delete_conversation(conv_id: str) -> dict[str, bool]:
+def delete_conversation(conv_id: str, owner: str | None = Depends(visitor)) -> dict[str, bool]:
+    own_conversation(conv_id, owner)
     repo.delete_conversation(conv_id)
     return {"ok": True}
 
@@ -158,13 +175,14 @@ class MessageIn(BaseModel):
 
 
 @app.post("/api/conversations/{conv_id}/messages")
-async def send_message(conv_id: str, body: MessageIn):
-    conv = repo.get_conversation(conv_id)
-    if not conv:
-        raise HTTPException(404, "conversation not found")
+async def send_message(conv_id: str, body: MessageIn, request: Request, owner: str | None = Depends(visitor)):
+    conv = own_conversation(conv_id, owner)
+    if len(body.content) > 8000:
+        raise HTTPException(413, "That message is too long (8,000 characters max).")
     if body.mode != "auto" and not get_settings().is_enabled(body.mode):
         raise HTTPException(409, f"the {body.mode} agent is switched off")
 
+    rate_limit(request, owner)
     stream = handle_turn(conv_id, body.content, body.mode)  # reads history before we add this message
     first = await _prime(stream)
     repo.add_message(conv_id, "user", body.content, mode=body.mode)
@@ -199,18 +217,20 @@ async def _prime(stream: AsyncIterator[AgentEvent]) -> AsyncIterator[AgentEvent]
 
 
 @app.get("/api/plans/{plan_id}")
-def read_plan(plan_id: str) -> dict[str, Any]:
+def read_plan(plan_id: str, owner: str | None = Depends(visitor)) -> dict[str, Any]:
     plan = repo.get_plan(plan_id)
     if not plan:
         raise HTTPException(404, "plan not found")
+    check_plan_access(plan.conversation_id, owner)
     return plan.model_dump(mode="json")
 
 
 @app.put("/api/plans/{plan_id}")
-def edit_plan(plan_id: str, body: dict[str, Any]) -> dict[str, Any]:
+def edit_plan(plan_id: str, body: dict[str, Any], owner: str | None = Depends(visitor)) -> dict[str, Any]:
     plan = repo.get_plan(plan_id)
     if not plan:
         raise HTTPException(404, "plan not found")
+    check_plan_access(plan.conversation_id, owner)
     if plan.status == "running":
         raise HTTPException(409, "plan is running")
     try:
@@ -223,12 +243,13 @@ def edit_plan(plan_id: str, body: dict[str, Any]) -> dict[str, Any]:
 
 
 @app.post("/api/plans/{plan_id}/execute")
-async def execute(plan_id: str, dry_run: bool = False):
+async def execute(plan_id: str, dry_run: bool = False, owner: str | None = Depends(visitor)):
     if not get_settings().is_enabled("execute"):
         raise HTTPException(409, "the execute agent is switched off")
     plan = repo.get_plan(plan_id)
     if not plan:
         raise HTTPException(404, "plan not found")
+    check_plan_access(plan.conversation_id, owner)
     if plan.status == "running":
         raise HTTPException(409, "plan is already running")
 
@@ -240,15 +261,22 @@ async def execute(plan_id: str, dry_run: bool = False):
 
 
 @app.get("/api/runs/{run_id}")
-def read_run(run_id: str) -> dict[str, Any]:
+def read_run(run_id: str, owner: str | None = Depends(visitor)) -> dict[str, Any]:
     run = repo.get_run(run_id)
-    if not run:
+    plan = repo.get_plan(run.plan_id) if run else None
+    if not run or not plan:
         raise HTTPException(404, "run not found")
+    check_plan_access(plan.conversation_id, owner)
     return run.model_dump(mode="json")
 
 
 @app.post("/api/runs/{run_id}/cancel")
-def cancel_run(run_id: str) -> dict[str, bool]:
+def cancel_run(run_id: str, owner: str | None = Depends(visitor)) -> dict[str, bool]:
+    run = repo.get_run(run_id)
+    plan = repo.get_plan(run.plan_id) if run else None
+    if not run or not plan:
+        raise HTTPException(404, "run not found")
+    check_plan_access(plan.conversation_id, owner)
     return {"cancelled": request_cancel(run_id)}
 
 
