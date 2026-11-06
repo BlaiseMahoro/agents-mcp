@@ -41,9 +41,9 @@ export function Composer({ mode, onMode, settings, streaming, onSend, onStop }: 
       <div className="mx-auto max-w-[760px]">
         <div className="mb-2 flex items-center justify-between gap-3">
           <AgentPicker mode={mode} onChange={onMode} settings={settings} />
-          <span className="hidden text-[13px] text-muted sm:block">{meta.blurb}</span>
+          <span className="hidden text-[14px] text-muted sm:block">{meta.blurb}</span>
         </div>
-        <div className={`flex items-end gap-2 rounded-2xl border bg-surface p-2 transition-colors focus-within:border-current ${meta.text} border-line`}>
+        <div className={`flex items-end gap-2 rounded-lg border bg-surface p-2 transition-colors focus-within:border-current ${meta.text} border-line`}>
           <label htmlFor="composer" className="sr-only">
             Message
           </label>
@@ -60,17 +60,17 @@ export function Composer({ mode, onMode, settings, streaming, onSend, onStop }: 
               }
             }}
             placeholder={PLACEHOLDER[mode]}
-            className="min-h-[40px] flex-1 resize-none bg-transparent px-2 py-2 text-[15px] text-ink placeholder:text-muted focus:outline-none focus-visible:outline-none"
+            className="min-h-[40px] flex-1 resize-none bg-transparent px-2 py-2 text-[16px] text-ink placeholder:text-muted focus:outline-none focus-visible:outline-none"
           />
           {streaming ? (
-            <button onClick={onStop} className="rounded-xl border border-line px-4 py-2 text-sm font-medium text-ink hover:bg-sunken">
+            <button onClick={onStop} className="rounded-md border border-line px-4 py-2 text-[15px] text-ink hover:bg-sunken">
               Stop
             </button>
           ) : (
             <button
               onClick={send}
               disabled={!text.trim()}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-40 ${mode === "auto" ? "bg-ink text-surface" : `${meta.bg} text-white`}`}
+              className={`rounded-md px-4 py-2 text-[15px] font-bold text-fog disabled:opacity-40 ${mode === "auto" ? "bg-ink" : meta.bg}`}
             >
               Send
             </button>

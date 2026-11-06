@@ -13,8 +13,12 @@ export function UserMessage({ message }: { message: Message }) {
   const meta = message.mode !== "auto" && message.mode in AGENT_META ? AGENT_META[message.mode as keyof typeof AGENT_META] : null;
   return (
     <div className="flex flex-col items-end gap-1">
-      {meta && <span className={`text-[12px] font-medium ${meta.text}`}>To {meta.label}</span>}
-      <div className="max-w-[85%] rounded-2xl rounded-tr-md bg-surface px-4 py-2.5 whitespace-pre-wrap shadow-[inset_0_0_0_1px_var(--line)]">
+      {meta && (
+        <span className={`text-[14px] ${meta.text}`}>
+          <span aria-hidden>{meta.sigil} </span>To the {meta.label}
+        </span>
+      )}
+      <div className="max-w-[85%] rounded-md border border-line bg-surface px-4 py-2.5 whitespace-pre-wrap">
         {message.content}
       </div>
     </div>
@@ -40,11 +44,14 @@ function LaneView({ lane, live }: { lane: Lane; live: boolean }) {
   // The coordinator's own words read as the main voice; specialists get a coloured lane.
   const plain = lane.agent === "orchestrator" || lane.agent === "system";
   return (
-    <div className={plain ? "" : `border-l-[3px] pl-4 ${meta.border}`}>
+    <div className={plain ? "" : `border-l pl-5 ${meta.border}`}>
       {!plain && (
-        <p className={`mb-1.5 flex items-center gap-2 text-[13px] font-semibold ${meta.text}`}>
-          {meta.label}
-          {live && <span aria-hidden className={`size-1.5 rounded-full pulse ${meta.bg}`} />}
+        <p className={`mb-2 flex items-baseline gap-2 ${meta.text}`}>
+          <span aria-hidden className={`text-[17px] ${live ? "pulse" : ""}`}>
+            {meta.sigil}
+          </span>
+          <span className="font-display text-[19px] leading-none">The {meta.label}</span>
+          {live && <span className="sr-only">is working</span>}
         </p>
       )}
       <div className="flex flex-col gap-2.5">
@@ -62,9 +69,9 @@ function BlockView({ block }: { block: Block }) {
       return <Markdown text={block.text} />;
     case "thinking":
       return (
-        <details className="text-[13px] text-muted">
+        <details className="text-[14px] text-muted">
           <summary className="cursor-pointer select-none hover:text-ink">Reasoning</summary>
-          <p className="mt-1 max-w-[68ch] whitespace-pre-wrap">{block.text}</p>
+          <p className="mt-1 max-w-[68ch] border-l border-line pl-3 italic whitespace-pre-wrap">{block.text}</p>
         </details>
       );
     case "tool":
@@ -79,7 +86,7 @@ function BlockView({ block }: { block: Block }) {
       return <RunCard run={block} />;
     case "error":
       return (
-        <p role="alert" className="rounded-lg border border-danger/40 bg-surface px-3 py-2 text-[14px] text-danger">
+        <p role="alert" className="rounded-md border border-danger/50 bg-surface px-3 py-2 text-[15px] text-danger">
           {block.message}
         </p>
       );
@@ -92,7 +99,7 @@ function ToolLine({ block }: { block: Extract<Block, { kind: "tool" }> }) {
     block.name === "web_search" ? "Searched" : block.name === "fetch_url" || block.name === "web_fetch" ? "Read" : `Used ${block.name}`;
   const shown = block.name === "fetch_url" || block.name === "web_fetch" ? hostOf(q) : q;
   return (
-    <details className="text-[13px] text-muted">
+    <details className="text-[14px] text-muted">
       <summary className={`select-none ${block.results?.length ? "cursor-pointer hover:text-ink" : "list-none"}`}>
         {verb} {shown && <span className="text-ink">“{shown}”</span>}
         {block.results && <span> with {block.results.length} results</span>}
@@ -102,7 +109,7 @@ function ToolLine({ block }: { block: Extract<Block, { kind: "tool" }> }) {
         <ul className="mt-1 ml-4 space-y-0.5">
           {block.results.map((r) => (
             <li key={r.url} className="truncate">
-              <a href={r.url} target="_blank" rel="noreferrer" className="hover:text-research hover:underline">
+              <a href={r.url} target="_blank" rel="noreferrer" className="hover:text-ink hover:underline hover:decoration-research">
                 {r.title || r.url}
               </a>
               <span className="ml-1.5 text-muted/70">{hostOf(r.url)}</span>
@@ -120,11 +127,11 @@ function ResearchCard({ report }: { report: ResearchReport }) {
   const open = report.open_questions ?? [];
   if (!findings.length && !sources.length) return null;
   return (
-    <section aria-label="Research summary" className="rounded-xl border border-line bg-surface">
+    <section aria-label="What the Seer found" className="rounded-sm border border-line bg-surface">
       {findings.length > 0 && (
-        <div className="border-b border-line bg-research-wash px-4 py-3">
-          <h3 className="text-[14px] font-semibold">Key findings</h3>
-          <ul className="mt-1.5 list-disc space-y-1 pl-5 text-[14px]">
+        <div className="border-b border-line px-5 py-4">
+          <h3 className="font-display text-[19px] text-research">What the Seer found</h3>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-[15px] marker:text-research">
             {findings.map((f, i) => (
               <li key={i}>{f}</li>
             ))}
@@ -132,23 +139,23 @@ function ResearchCard({ report }: { report: ResearchReport }) {
         </div>
       )}
       {sources.length > 0 && (
-        <div className="px-4 py-3">
-          <h3 className="text-[14px] font-semibold">Sources</h3>
-          <ol className="mt-1.5 space-y-1 text-[14px]">
+        <div className="px-5 py-4">
+          <h3 className="font-display text-[17px]">Sources</h3>
+          <ol className="mt-1.5 space-y-1 text-[15px]">
             {sources.map((s, i) => (
               <li key={s.url} className="flex gap-2">
-                <span className="w-5 shrink-0 text-right tabular-nums text-muted">{i + 1}</span>
-                <a href={s.url} target="_blank" rel="noreferrer" className="min-w-0 truncate text-research hover:underline">
+                <span className="w-5 shrink-0 text-right text-muted tabular-nums">{i + 1}</span>
+                <a href={s.url} target="_blank" rel="noreferrer" className="min-w-0 truncate underline decoration-research/50 underline-offset-[3px] hover:decoration-research">
                   {s.title || s.url}
                 </a>
-                <span className="shrink-0 text-[13px] text-muted">{hostOf(s.url)}</span>
+                <span className="shrink-0 text-[14px] text-muted">{hostOf(s.url)}</span>
               </li>
             ))}
           </ol>
         </div>
       )}
       {open.length > 0 && (
-        <details className="border-t border-line px-4 py-2.5 text-[13px] text-muted">
+        <details className="border-t border-line px-5 py-2.5 text-[14px] text-muted">
           <summary className="cursor-pointer select-none hover:text-ink">Still open ({open.length})</summary>
           <ul className="mt-1 list-disc pl-5">
             {open.map((q, i) => (
@@ -171,23 +178,21 @@ function Approval({ planId }: { planId: string }) {
   const waiting = plan.status === "draft" || plan.status === "approved";
   const canRun = (settings?.enabled.execute ?? true) && !streaming;
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-xl border border-execute bg-execute-wash px-4 py-3">
-      <p className="min-w-0 flex-1 text-[14px]">
+    <div className="flex flex-wrap items-center gap-3 rounded-sm border border-execute/60 bg-execute-wash px-5 py-3">
+      <p className="min-w-0 flex-1 text-[15px]">
         {waiting ? (
-          <>
-            Ready to run <span className="font-semibold">{plan.goal}</span> ({plan.steps.length} steps). Check the steps above first.
-          </>
+          <>The spell is written. Read its {plan.steps.length} steps above, then cast it.</>
         ) : (
-          <>This plan has already been run. See the results below.</>
+          <>This spell has been cast. The results are below.</>
         )}
       </p>
       {waiting && (
         <div className="flex gap-2">
-          <button onClick={() => runPlan(plan.id, false)} disabled={!canRun} className="rounded-lg bg-execute px-3.5 py-1.5 text-sm font-semibold text-white disabled:opacity-40">
-            Run plan
+          <button onClick={() => runPlan(plan.id, false)} disabled={!canRun} className="rounded-md bg-execute px-3.5 py-1.5 text-[15px] font-bold text-fog disabled:opacity-40">
+            Cast spell
           </button>
-          <button onClick={() => runPlan(plan.id, true)} disabled={!canRun} className="rounded-lg border border-line bg-surface px-3 py-1.5 text-sm hover:bg-sunken disabled:opacity-40">
-            Preview run
+          <button onClick={() => runPlan(plan.id, true)} disabled={!canRun} className="rounded-md border border-line bg-surface px-3 py-1.5 text-[15px] hover:bg-sunken disabled:opacity-40">
+            Preview
           </button>
         </div>
       )}
@@ -197,8 +202,8 @@ function Approval({ planId }: { planId: string }) {
 
 export function Working({ label }: { label: string }) {
   return (
-    <p className="flex items-center gap-2 text-[14px] text-muted">
-      <span aria-hidden className="size-1.5 rounded-full bg-muted pulse" />
+    <p className="flex items-center gap-2 text-[15px] text-muted">
+      <span aria-hidden className="pulse">✶</span>
       {label}
     </p>
   );

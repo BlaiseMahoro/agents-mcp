@@ -42,10 +42,10 @@ export function SettingsDrawer({ open, settings, health, onClose, onChange, onRe
 
   return (
     <div className="fixed inset-0 z-30 flex justify-end">
-      <button aria-label="Close settings" className="absolute inset-0 bg-ink/20" onClick={onClose} />
-      <aside role="dialog" aria-modal="true" aria-label="Settings" className="relative flex h-full w-full max-w-[440px] flex-col overflow-y-auto bg-surface shadow-xl">
+      <button aria-label="Close settings" className="absolute inset-0 bg-[#050916]/70" onClick={onClose} />
+      <aside role="dialog" aria-modal="true" aria-label="Settings" className="relative flex h-full w-full max-w-[440px] flex-col overflow-y-auto border-l border-line bg-surface">
         <header className="flex items-center justify-between border-b border-line px-5 py-4">
-          <h2 className="text-[17px] font-semibold">Settings</h2>
+          <h2 className="font-display text-[24px]">Settings</h2>
           <button ref={closeRef} onClick={onClose} className="rounded-lg px-2.5 py-1 text-sm text-muted hover:bg-sunken hover:text-ink">
             Done
           </button>
@@ -54,8 +54,8 @@ export function SettingsDrawer({ open, settings, health, onClose, onChange, onRe
         {error && <p className="mx-5 mt-4 rounded-lg bg-sunken px-3 py-2 text-[13px] text-danger">{error}</p>}
 
         <section className="px-5 pt-5">
-          <h3 className="text-[15px] font-semibold">Agents</h3>
-          <p className="mt-0.5 text-[13px] text-muted">A switched-off agent can’t be picked, and Auto won’t call it. The MCP server picks up changes when it restarts.</p>
+          <h3 className="font-display text-[19px]">The familiars</h3>
+          <p className="mt-0.5 text-[14px] text-muted">A familiar you switch off can’t be picked, and the Wizard won’t send it. The MCP server picks up changes when it restarts.</p>
           <ul className="mt-3 space-y-3">
             {ROWS.map((name) => {
               const meta = AGENT_META[name];
@@ -64,11 +64,14 @@ export function SettingsDrawer({ open, settings, health, onClose, onChange, onRe
               const on = toggleable ? settings.enabled[name] : true;
               const options = models[cfg.provider] ?? [];
               return (
-                <li key={name} className={`rounded-xl border border-line p-3 ${on ? "" : "opacity-60"}`}>
+                <li key={name} className={`rounded-sm border border-line p-3 ${on ? "" : "opacity-60"}`}>
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className={`text-[14px] font-semibold ${meta.text}`}>{name === "orchestrator" ? "Auto (coordinator)" : meta.label}</p>
-                      <p className="text-[12.5px] text-muted">{name === "orchestrator" ? "Routes Auto messages to the other agents" : meta.blurb}</p>
+                      <p className={`font-display text-[18px] ${meta.text}`}>
+                        <span aria-hidden>{meta.sigil} </span>
+                        {meta.label}
+                      </p>
+                      <p className="text-[14px] text-muted">{meta.blurb || AGENT_META.auto.blurb}</p>
                     </div>
                     {toggleable && <Switch label={`${meta.label} agent`} checked={on} onChange={(v) => save({ enabled: { [name]: v } as Settings["enabled"] })} />}
                   </div>
@@ -118,24 +121,24 @@ export function SettingsDrawer({ open, settings, health, onClose, onChange, onRe
         </section>
 
         <section className="px-5 pt-6">
-          <div className="flex items-center justify-between gap-3 rounded-xl border border-line p-3">
+          <div className="flex items-center justify-between gap-3 rounded-sm border border-line p-3">
             <div>
-              <p className="text-[14px] font-semibold">Ask before running plans</p>
-              <p className="text-[12.5px] text-muted">In Auto, plans wait for you to press Run plan.</p>
+              <p className="text-[15px] font-bold">Ask before casting spells</p>
+              <p className="text-[14px] text-muted">The Wizard waits for you to press Cast spell.</p>
             </div>
-            <Switch label="Ask before running plans" checked={settings.require_approval} onChange={(v) => save({ require_approval: v })} />
+            <Switch label="Ask before casting spells" checked={settings.require_approval} onChange={(v) => save({ require_approval: v })} />
           </div>
         </section>
 
         <section className="px-5 py-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-[15px] font-semibold">Services</h3>
+            <h3 className="font-display text-[19px]">Services</h3>
             <button onClick={onRecheck} className="rounded-lg px-2 py-1 text-[13px] text-muted hover:bg-sunken hover:text-ink">
               Check again
             </button>
           </div>
           {health ? (
-            <ul className="mt-2 divide-y divide-line rounded-xl border border-line text-[13px]">
+            <ul className="mt-2 divide-y divide-line rounded-sm border border-line text-[14px]">
               <HealthRow name="Docker" check={health.docker} fix="Open Docker Desktop." />
               <HealthRow name="Sandbox image" check={health.sandbox_image} fix="Run `make sandbox`." />
               <HealthRow name="SearXNG search" check={health.searxng} fix="Run `docker compose up -d searxng`." />
@@ -184,7 +187,7 @@ function Switch({ label, checked, onChange }: { label: string; checked: boolean;
       onClick={() => onChange(!checked)}
       className={`relative h-6 w-10 shrink-0 rounded-full transition-colors ${checked ? "bg-execute" : "bg-line"}`}
     >
-      <span className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-surface shadow transition-transform ${checked ? "translate-x-4" : ""}`} />
+      <span className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-ink transition-transform ${checked ? "translate-x-4" : ""}`} />
     </button>
   );
 }

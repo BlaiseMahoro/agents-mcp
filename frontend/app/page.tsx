@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActionsContext, type ChatActions } from "@/components/actions";
 import { AGENT_META } from "@/components/agents";
+import { Astrolabe } from "@/components/Astrolabe";
 import { Composer } from "@/components/Composer";
 import { SettingsDrawer } from "@/components/SettingsDrawer";
 import { Sidebar } from "@/components/Sidebar";
@@ -119,7 +120,7 @@ export default function Home() {
 
   return (
     <ActionsContext.Provider value={actions}>
-      <div className="flex h-dvh overflow-hidden">
+      <div className="relative flex h-dvh overflow-hidden">
         {/* Desktop: always visible. Phone: slides over the chat from the Chats button. */}
         <div className={chatsOpen ? "fixed inset-0 z-20 flex md:static md:block" : "hidden md:block"}>
           <Sidebar
@@ -150,7 +151,7 @@ export default function Home() {
               setSettingsOpen(true);
             }}
           />
-          {chatsOpen && <button aria-label="Close chats" className="flex-1 bg-ink/20 md:hidden" onClick={() => setChatsOpen(false)} />}
+          {chatsOpen && <button aria-label="Close chats" className="flex-1 bg-[#050916]/70 md:hidden" onClick={() => setChatsOpen(false)} />}
         </div>
 
         <main className="flex min-w-0 flex-1 flex-col">
@@ -158,7 +159,7 @@ export default function Home() {
             <button onClick={() => setChatsOpen(true)} className="rounded-lg px-2.5 py-1 text-sm hover:bg-sunken">
               Chats
             </button>
-            <p className="font-bold">Agents</p>
+            <p className="font-display text-[20px]">Wizard</p>
             <button onClick={() => setSettingsOpen(true)} className="rounded-lg px-2.5 py-1 text-sm hover:bg-sunken">
               Settings
             </button>
@@ -176,7 +177,7 @@ export default function Home() {
               const el = e.currentTarget;
               stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
             }}
-            className="flex-1 overflow-y-auto px-4"
+            className="relative min-h-0 flex-1 overflow-y-auto px-4"
           >
             <div className="mx-auto flex max-w-[760px] flex-col gap-6 py-8">
               {messages.length === 0 ? (
@@ -204,32 +205,38 @@ export default function Home() {
 }
 
 function EmptyState({ settings, onPick }: { settings: Settings | null; onPick: (m: Mode) => void }) {
+  const enabled = settings?.enabled ?? { research: true, plan: true, execute: true };
   return (
-    <div className="pt-[12vh]">
-      <h1 className="max-w-[22ch] text-[28px] leading-tight font-bold tracking-tight">Look something up, make a plan, then run it.</h1>
-      <p className="mt-2 max-w-[60ch] text-muted">
-        Auto decides which agent to use. To talk to one directly, pick it below the chat. Plans run in a Docker sandbox, and you can review them first.
-      </p>
-      <ul className="mt-8 grid gap-3 sm:grid-cols-3">
-        {SPECIALISTS.map((a) => {
-          const meta = AGENT_META[a];
-          const on = settings?.enabled[a] ?? true;
-          const model = settings?.agents[a]?.model;
-          return (
-            <li key={a}>
-              <button
-                onClick={() => onPick(a)}
-                disabled={!on}
-                className={`flex h-full w-full flex-col items-start rounded-xl border-t-[3px] bg-surface p-3.5 text-left shadow-[inset_0_0_0_1px_var(--line)] hover:bg-sunken disabled:opacity-50 ${meta.border}`}
-              >
-                <span className={`text-[14px] font-semibold ${meta.text}`}>{meta.label}</span>
-                <span className="mt-1 block text-[13px] text-muted">{meta.blurb}</span>
-                <span className="mt-auto block w-full truncate pt-2 font-mono text-[11.5px] text-muted">{on ? model : "Switched off"}</span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+    <div className="grid items-center gap-8 pt-[8vh] sm:grid-cols-[minmax(0,15rem)_1fr] sm:gap-12">
+      <Astrolabe enabled={enabled} className="mx-auto w-44 sm:w-full" />
+      <div>
+        <h1 className="font-display text-[2.6rem] leading-[1.05] text-ink sm:text-[3.1rem]">What would you have me do?</h1>
+        <p className="mt-4 max-w-[52ch] text-[17px] text-muted">
+          Ask anything. I send my Seer to search, my Scribe to write the spell, and my Conjurer to cast it in a sealed sandbox.
+          {(settings?.require_approval ?? true) && " Nothing is cast until you approve the spell."}
+        </p>
+        <ul className="mt-7 space-y-1">
+          {SPECIALISTS.map((a) => {
+            const meta = AGENT_META[a];
+            const on = enabled[a];
+            return (
+              <li key={a}>
+                <button
+                  onClick={() => onPick(a)}
+                  disabled={!on}
+                  className="group grid w-full grid-cols-[1.75rem_6.5rem_1fr] items-baseline rounded-md px-2 py-1.5 text-left hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <span aria-hidden className={`text-[18px] ${meta.text}`}>
+                    {meta.sigil}
+                  </span>
+                  <span className={`font-display text-[19px] ${meta.text}`}>{meta.label}</span>
+                  <span className="text-[15px] text-muted group-hover:text-ink">{on ? meta.blurb : "Sent away (switched off in Settings)"}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </div>
   );
 }

@@ -5,12 +5,12 @@ import { api, ApiError, type Plan, type Step } from "@/lib/api";
 import { useActions } from "./actions";
 
 const STATUS_LABEL: Record<Plan["status"], string> = {
-  draft: "Not run yet",
+  draft: "Not cast yet",
   approved: "Approved",
-  running: "Running",
-  succeeded: "Ran successfully",
-  failed: "Run failed",
-  cancelled: "Run cancelled",
+  running: "Casting",
+  succeeded: "Cast",
+  failed: "Cast failed",
+  cancelled: "Cast cancelled",
 };
 
 const TYPE_LABEL: Record<Step["type"], string> = {
@@ -66,21 +66,23 @@ export function PlanCard({ plan: initial }: { plan: Plan }) {
 
   return (
     <section
-      aria-label={`Plan: ${plan.goal}`}
-      className="overflow-hidden rounded-xl border border-line bg-surface"
+      aria-label={`Spell: ${plan.goal}`}
+      // a manuscript frame: brass rule, a gap, a second hairline
+      className="rounded-sm border border-research/70 bg-surface p-1"
     >
-      <header className="flex flex-wrap items-start justify-between gap-2 border-b border-line bg-plan-wash px-4 py-3">
-        <div className="min-w-0">
-          <h3 className="font-semibold leading-snug">{plan.goal}</h3>
-          <p className="mt-0.5 text-[13px] text-muted">{plan.steps.length} steps</p>
+      <div className="border border-research/30">
+      <header className="flex items-start justify-between gap-4 px-5 pt-4 pb-2">
+        <div className="min-w-0 flex-1">
+          <h3 className="max-w-[48ch] font-display text-[20px] leading-snug">{plan.goal}</h3>
+          <p className="mt-0.5 text-[14px] text-muted">A spell of {plan.steps.length} steps</p>
         </div>
         <StatusPill status={plan.status} />
       </header>
 
-      <div className="px-4 py-3">
-        <p className="max-w-[68ch] text-[14px]">{plan.summary}</p>
+      <div className="px-5 pb-3">
+        <p className="dropcap max-w-[66ch] text-[15px]">{plan.summary}</p>
         {plan.assumptions.length > 0 && (
-          <details className="mt-2 text-[13px] text-muted">
+          <details className="mt-2 text-[14px] text-muted">
             <summary className="cursor-pointer select-none hover:text-ink">Assumptions ({plan.assumptions.length})</summary>
             <ul className="mt-1 list-disc pl-5">
               {plan.assumptions.map((a, i) => (
@@ -95,14 +97,15 @@ export function PlanCard({ plan: initial }: { plan: Plan }) {
         {(editing ? draft : plan.steps).map((s, i) => {
           const body = stepBody(s);
           return (
-            <li key={s.id} className="grid grid-cols-[2.25rem_1fr] gap-x-2 border-b border-line px-4 py-3 last:border-b-0">
-              <span className="pt-0.5 font-mono text-[13px] text-plan tabular-nums">{i + 1}</span>
+            <li key={s.id} className="grid grid-cols-[2.5rem_1fr] gap-x-2 border-b border-line px-5 py-3 last:border-b-0">
+              {/* rubric: the step number in cinnabar, as in a manuscript's instructions */}
+              <span className="font-display text-[26px] leading-none text-plan">{i + 1}</span>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="text-[12px] font-medium text-muted">{TYPE_LABEL[s.type]}</span>
+                  <span className="text-[13px] text-muted">{TYPE_LABEL[s.type]}</span>
                   {s.type === "write_file" && <span className="font-mono text-[12px] text-muted">{s.path}</span>}
-                  {s.depends_on.length > 0 && <span className="text-[12px] text-muted">after {s.depends_on.join(", ")}</span>}
-                  {s.on_failure === "continue" && <span className="text-[12px] text-muted">optional</span>}
+                  {s.depends_on.length > 0 && <span className="text-[13px] text-muted">after {s.depends_on.join(", ")}</span>}
+                  {s.on_failure === "continue" && <span className="text-[13px] text-muted">optional</span>}
                 </div>
                 {editing ? (
                   <>
@@ -122,7 +125,7 @@ export function PlanCard({ plan: initial }: { plan: Plan }) {
                   </>
                 ) : (
                   <>
-                    <p className="text-[14px]">{s.description}</p>
+                    <p className="text-[15px]">{s.description}</p>
                     {s.type !== "read_file" && body.value && (
                       <pre className="mt-1.5 max-h-48 overflow-auto rounded-md bg-console px-2.5 py-1.5 font-mono text-[12.5px] text-console-ink whitespace-pre-wrap">
                         {s.type === "shell" ? `$ ${body.value}` : body.value}
@@ -136,12 +139,12 @@ export function PlanCard({ plan: initial }: { plan: Plan }) {
         })}
       </ol>
 
-      {error && <p className="border-t border-line bg-sunken px-4 py-2 text-[13px] whitespace-pre-wrap text-danger">{error}</p>}
+      {error && <p className="border-t border-line bg-sunken px-5 py-2 text-[14px] whitespace-pre-wrap text-danger">{error}</p>}
 
-      <footer className="flex flex-wrap items-center gap-2 border-t border-line px-4 py-3">
+      <footer className="flex flex-wrap items-center gap-2 border-t border-line px-5 py-3">
         {editing ? (
           <>
-            <button onClick={save} disabled={saving} className="rounded-lg bg-plan px-3.5 py-1.5 text-sm font-semibold text-white disabled:opacity-50">
+            <button onClick={save} disabled={saving} className="rounded-md bg-plan px-3.5 py-1.5 text-[15px] font-bold text-fog disabled:opacity-50">
               {saving ? "Saving…" : "Save steps"}
             </button>
             <button
@@ -150,7 +153,7 @@ export function PlanCard({ plan: initial }: { plan: Plan }) {
                 setDraft(plan.steps);
                 setError("");
               }}
-              className="rounded-lg px-3 py-1.5 text-sm text-muted hover:text-ink"
+              className="rounded-md px-3 py-1.5 text-[15px] text-muted hover:text-ink"
             >
               Discard edits
             </button>
@@ -160,12 +163,12 @@ export function PlanCard({ plan: initial }: { plan: Plan }) {
             <button
               onClick={() => runPlan(plan.id, false)}
               disabled={!canRun}
-              className="rounded-lg bg-execute px-3.5 py-1.5 text-sm font-semibold text-white disabled:opacity-40"
+              className="rounded-md bg-execute px-3.5 py-1.5 text-[15px] font-bold text-fog disabled:opacity-40"
             >
-              {plan.status === "draft" || plan.status === "approved" ? "Run plan" : "Run again"}
+              {plan.status === "draft" || plan.status === "approved" ? "Cast spell" : "Cast again"}
             </button>
-            <button onClick={() => runPlan(plan.id, true)} disabled={!canRun} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-sunken disabled:opacity-40">
-              Preview run
+            <button onClick={() => runPlan(plan.id, true)} disabled={!canRun} className="rounded-md border border-line px-3 py-1.5 text-[15px] hover:bg-sunken disabled:opacity-40">
+              Preview
             </button>
             <button
               onClick={() => {
@@ -173,14 +176,15 @@ export function PlanCard({ plan: initial }: { plan: Plan }) {
                 setEditing(true);
               }}
               disabled={plan.status === "running"}
-              className="rounded-lg px-3 py-1.5 text-sm text-muted hover:text-ink disabled:opacity-40"
+              className="rounded-md px-3 py-1.5 text-[15px] text-muted hover:text-ink disabled:opacity-40"
             >
               Edit steps
             </button>
-            {!executeOn && <span className="text-[13px] text-muted">Turn on Execute in Settings to run this plan.</span>}
+            {!executeOn && <span className="text-[14px] text-muted">The Conjurer is switched off, so this spell can&rsquo;t be cast.</span>}
           </>
         )}
       </footer>
+      </div>
     </section>
   );
 }
@@ -189,7 +193,7 @@ function StatusPill({ status }: { status: Plan["status"] }) {
   const tone =
     status === "succeeded" ? "text-execute" : status === "failed" ? "text-danger" : status === "running" ? "text-plan" : "text-muted";
   return (
-    <span className={`flex items-center gap-1.5 rounded-full border border-current px-2 py-0.5 text-[12px] font-medium ${tone}`}>
+    <span className={`flex shrink-0 items-center gap-1.5 rounded-sm border border-current px-2 py-0.5 text-[13px] ${tone}`}>
       <span aria-hidden className={`size-1.5 rounded-full bg-current ${status === "running" ? "pulse" : ""}`} />
       {STATUS_LABEL[status]}
     </span>

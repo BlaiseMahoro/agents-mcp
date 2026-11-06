@@ -1,19 +1,20 @@
 import type { AgentName, Mode } from "@/lib/api";
 
-type Meta = { label: string; text: string; bg: string; wash: string; border: string; blurb: string };
+type Meta = { label: string; sigil: string; text: string; bg: string; wash: string; border: string; blurb: string };
 
+// The app's agents, in the Wizard's terms. Internal names (research/plan/execute) stay unchanged.
 export const AGENT_META: Record<AgentName | "auto" | "system", Meta> = {
-  auto: { label: "Auto", text: "text-ink", bg: "bg-ink", wash: "bg-sunken", border: "border-ink", blurb: "Picks the right agent for each message" },
-  orchestrator: { label: "Coordinator", text: "text-orchestrator", bg: "bg-orchestrator", wash: "bg-sunken", border: "border-line", blurb: "" },
-  research: { label: "Research", text: "text-research", bg: "bg-research", wash: "bg-research-wash", border: "border-research", blurb: "Searches the web and reasons over sources" },
-  plan: { label: "Plan", text: "text-plan", bg: "bg-plan", wash: "bg-plan-wash", border: "border-plan", blurb: "Turns a goal into steps that can run" },
-  execute: { label: "Execute", text: "text-execute", bg: "bg-execute", wash: "bg-execute-wash", border: "border-execute", blurb: "Runs the latest plan in a sandbox" },
-  system: { label: "System", text: "text-muted", bg: "bg-muted", wash: "bg-sunken", border: "border-line", blurb: "" },
+  auto: { label: "Wizard", sigil: "✶", text: "text-ink", bg: "bg-ink", wash: "bg-sunken", border: "border-ink", blurb: "Decides which of the three to send" },
+  orchestrator: { label: "Wizard", sigil: "✶", text: "text-orchestrator", bg: "bg-orchestrator", wash: "bg-sunken", border: "border-line", blurb: "" },
+  research: { label: "Seer", sigil: "☽", text: "text-research", bg: "bg-research", wash: "bg-research-wash", border: "border-research", blurb: "Searches the web and weighs the sources" },
+  plan: { label: "Scribe", sigil: "☿", text: "text-plan", bg: "bg-plan", wash: "bg-plan-wash", border: "border-plan", blurb: "Writes a spell: the steps to get it done" },
+  execute: { label: "Conjurer", sigil: "☉", text: "text-execute", bg: "bg-execute", wash: "bg-execute-wash", border: "border-execute", blurb: "Casts the spell in a sealed sandbox" },
+  system: { label: "System", sigil: "·", text: "text-muted", bg: "bg-muted", wash: "bg-sunken", border: "border-line", blurb: "" },
 };
 
 export const PLACEHOLDER: Record<Mode, string> = {
-  auto: "Ask anything, or describe something you want done",
-  research: "What should I look into?",
-  plan: "What's the goal? I'll use any research from this chat",
-  execute: "Send to run the latest plan (say “dry run” to preview)",
+  auto: "Ask the Wizard anything, or describe what you want done",
+  research: "What should the Seer look into?",
+  plan: "What should the spell achieve? The Scribe uses anything the Seer found",
+  execute: "Send to cast the latest spell (say “dry run” to preview it)",
 };

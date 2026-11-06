@@ -23,7 +23,7 @@ Available specialists (only these are switched on): {available}.
 After a specialist finishes, give the user a short summary of the result and the sensible next step.
 If a capability is switched off, say so instead of improvising it."""
 
-APPROVAL_NOTE = " Plans need the user's approval: calling it shows them a 'Run plan' button; do not claim it ran."
+APPROVAL_NOTE = " Plans need the user's approval: calling it shows them a 'Cast spell' button; do not claim it ran."
 
 
 def build_tools(conversation_id: str) -> list[Tool]:
@@ -66,7 +66,7 @@ def build_tools(conversation_id: str) -> list[Tool]:
                 return
             if get_settings().require_approval and args.get("dry_run") is not True:
                 yield AgentEvent(type="approval_required", agent="execute", data={"plan_id": plan.id})
-                yield ToolResult(f"Plan {plan.id} is waiting for the user to approve it with the 'Run plan' button.")
+                yield ToolResult(f"Plan {plan.id} is waiting for the user to approve it with the 'Cast spell' button.")
                 return
             events = []
             async for ev in run_plan(plan, dry_run=bool(args.get("dry_run"))):
